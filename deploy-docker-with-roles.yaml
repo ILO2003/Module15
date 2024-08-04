@@ -1,0 +1,79 @@
+---
+- name: Wait for SSH connection
+  hosts: all
+  gather_facts: False
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Ensure SSH port open
+      wait_for:
+        port: 22
+        delay: 10
+        timeout: 100
+        search_regex: OpenSSH
+        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
+
+
+- name: Install Docker
+  hosts: all
+  gather_facts: False
+  become: yes
+  tasks:
+    - name: install docker
+      yum:
+        name: docker
+        update_cache: yes
+        state: present
+
+
+- name: Create new linux user
+  hosts: all
+  gather_facts: False
+  become: yes
+  vars:
+    groups: adm, docker
+  roles:
+    - create_user
+
+
+
+- name: install Docker-compose
+  hosts: all
+  gather_facts: False
+  become: yes
+  become_user: ilo
+  tasks:
+    - name: Create docker compose dir
+      file:
+        path: ~/.docker/cli-plugins
+        state: directory
+    - name: Install docker-compose
+      get_url:
+        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+        dest: ~/.docker/cli-plugins/docker-compose
+        mode: +x
+
+- name: start docker
+  hosts: all
+  gather_facts: False
+  become: yes
+  tasks:
+    - name: Start docker daemon
+      systemd:
+        name: docker
+        state: started
+
+
+- name: Start docker containers
+  hosts: all
+  gather_facts: False
+  become: yes
+  become_user: ilo
+  vars_files:
+    - project-vars
+  roles:
+    - start_containers
+    
+
+

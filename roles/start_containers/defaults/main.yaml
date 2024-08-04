@@ -1,0 +1,3 @@
+docker_registry: https://aws.example.com
+docker_usrname: aws
+docker_password: abc123
